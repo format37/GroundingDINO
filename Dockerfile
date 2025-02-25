@@ -1,35 +1,64 @@
-FROM pytorch/pytorch:2.1.2-cuda12.1-cudnn8-runtime
-ARG DEBIAN_FRONTEND=noninteractive
+FROM nvidia/cuda:11.8.0-cudnn8-devel-ubuntu22.04
 
-ENV CUDA_HOME=/usr/local/cuda \
-     TORCH_CUDA_ARCH_LIST="6.0 6.1 7.0 7.5 8.0 8.6+PTX" \
-     SETUPTOOLS_USE_DISTUTILS=stdlib
+ENV CUDA_HOME=/usr/local/cuda-11.8/
 
-RUN conda update conda -y
+# Avoid interactive prompts during build
+ENV DEBIAN_FRONTEND=noninteractive
 
-# Install libraries in the brand new image. 
-RUN apt-get -y update && apt-get install -y --no-install-recommends \
-         wget \
-         build-essential \
-         git \
-         python3-opencv \
-         ca-certificates && \
-    rm -rf /var/lib/apt/lists/*
+# System dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    git \
+    wget \
+    python3 \
+    python3-dev \
+    python3-pip \
+    python3-venv \
+    python3-opencv \
+    && rm -rf /var/lib/apt/lists/*
 
-# Set the working directory for all the subsequent Dockerfile instructions.
-WORKDIR /opt/program
+WORKDIR /app
 
+# Clone GroundingDINO repo
 RUN git clone https://github.com/IDEA-Research/GroundingDINO.git
 
-RUN mkdir weights ; cd weights ; wget -q https://github.com/IDEA-Research/GroundingDINO/releases/download/v0.1.0-alpha/groundingdino_swint_ogc.pth ; cd ..
+# pip install torch==1.12.1+cu118 torchvision==0.13.1+cu118 --extra-index-url https://download.pytorch.org/whl/cu118 && \
+# Install Python dependencies
+RUN pip install --upgrade pip && \
+    pip install torch==1.12.1+cu116 torchvision==0.13.1+cu116 torchaudio==0.12.1+cu116 --extra-index-url https://download.pytorch.org/whl/cu116 && \
+    pip install networkx==2.6.3
 
-RUN conda install -c "nvidia/label/cuda-12.1.1" cuda -y
-ENV CUDA_HOME=$CONDA_PREFIX
+# Install GroundingDINO requirements
+RUN cd GroundingDINO && \
+    pip install -r requirements.txt && \
+    pip install -e .
 
-ENV PATH=/usr/local/cuda/bin:$PATH
+# Download pre-trained weights
+RUN mkdir -p /app/weights && \
+    wget -P /app/weights https://github.com/IDEA-Research/GroundingDINO/releases/download/v0.1.0-alpha/groundingdino_swint_ogc.pth
 
-RUN cd GroundingDINO/ && python -m pip install .
+# Additional fixes:
+# 1. Make "python" available as python3.
+RUN ln -s $(which python3) /usr/bin/python
+# 2. Pin numpy to an earlier version to avoid compatibility issues.
+RUN pip install numpy==1.25.0
 
-COPY docker_test.py docker_test.py
+RUN pip install gradio==4.44.1
 
-CMD [ "python", "docker_test.py" ]
+# Environment variables
+ENV PYTHONPATH=/app/GroundingDINO
+ENV CUDA_VISIBLE_DEVICES=0
+
+# Copy the single_image.py file to the container
+COPY demo/multiple_image.py /app/GroundingDINO/demo/multiple_image.py
+
+# Copy the room.jpg file to the container
+COPY demo/animals.jpg /app/GroundingDINO/demo/animals.jpg
+
+# Install the package in development mode
+# RUN cd GroundingDINO && python setup.py build develop --user
+
+# Use JSON array format for CMD
+CMD ["bash", "-c", "cd GroundingDINO && python3 demo/multiple_image.py"]
+# CMD ["bash", "-c", "cd GroundingDINO && python3 demo/gradio_app.py"]
+# CMD ["bash"]
