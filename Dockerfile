@@ -50,15 +50,17 @@ ENV PYTHONPATH=/app/GroundingDINO
 ENV CUDA_VISIBLE_DEVICES=0
 
 # Copy the single_image.py file to the container
-COPY demo/multiple_image.py /app/GroundingDINO/demo/multiple_image.py
+# COPY demo/multiple_image.py /app/GroundingDINO/demo/multiple_image.py
+COPY demo/server.py /app/GroundingDINO/demo/server.py
 
 # Copy the room.jpg file to the container
-COPY demo/animals.jpg /app/GroundingDINO/demo/animals.jpg
+# COPY demo/animals.jpg /app/GroundingDINO/demo/animals.jpg
 
 # Install the package in development mode
 # RUN cd GroundingDINO && python setup.py build develop --user
 
 # Use JSON array format for CMD
-CMD ["bash", "-c", "cd GroundingDINO && python3 demo/multiple_image.py"]
+# CMD ["bash", "-c", "cd GroundingDINO && python3 demo/multiple_image.py"]
 # CMD ["bash", "-c", "cd GroundingDINO && python3 demo/gradio_app.py"]
+CMD ["bash", "-c", "cd GroundingDINO && python3 demo/server.py"]
 # CMD ["bash"]

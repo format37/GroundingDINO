@@ -123,8 +123,8 @@ def main():
 
     logger.info("Saving annotated image...")
     # Save the annotated image
-    cv2.imwrite("output/result.jpg", annotated_frame)
-    logger.info("Annotated image saved to output/result.jpg. Sleeping..")
+    cv2.imwrite("outputs/result.jpg", annotated_frame)
+    logger.info("Annotated image saved to outputs/result.jpg. Sleeping..")
     # # Wait indefinitely to keep the container running
     # while True:
     #     time.sleep(1)
